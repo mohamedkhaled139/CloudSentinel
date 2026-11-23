@@ -8,14 +8,14 @@ COPY frontend/ ./
 RUN npm run build
 
 # ---- Build the Python wheel -----------------------------------------------------------------------
-FROM python:3.12-slim AS backend-build
+FROM python:3.15-slim AS backend-build
 WORKDIR /src
 RUN pip install --no-cache-dir build
 COPY backend/ ./
 RUN python -m build --wheel --outdir /wheels
 
 # ---- Runtime --------------------------------------------------------------------------------------
-FROM python:3.12-slim
+FROM python:3.15-slim
 LABEL org.opencontainers.image.title="CloudSentinel" \
       org.opencontainers.image.description="Self-hosted infrastructure health and availability intelligence" \
       org.opencontainers.image.licenses="MIT" \
