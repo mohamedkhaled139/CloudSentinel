@@ -247,7 +247,7 @@ export function MonitorDetailPage() {
         {m.is_synthetic && <div className="alert warn small"><SyntheticBadge /> This monitor produces simulated demo results.</div>}
         <div className="grid cols-4">
           <Kpi label="Current status" value={<StatusBadge status={m.enabled ? m.last_status : "disabled"} />} sub={m.last_message || "—"} />
-          <Kpi label={`Availability (${WINDOWS.find((w) => w.h === hours)?.l})`} value={pct(stats.data?.availability_pct, 3)} sub={`${stats.data?.checks ?? 0} checks`} />
+          <Kpi label={`Availability (${WINDOWS.find((w) => w.h === hours)?.l})`} value={pct(stats.data?.availability_pct, 3)} sub={`${stats.data?.checks ?? 0} check${stats.data?.checks === 1 ? "" : "s"}`} />
           <Kpi label="Avg / p95 response" value={ms(stats.data?.avg_latency_ms)} sub={`p95 ${ms(stats.data?.p95_latency_ms)}`} />
           <Kpi label="Last check" value={<span style={{ fontSize: 18 }}>{timeAgo(m.last_checked_at)}</span>}
             sub={m.consecutive_failures ? `${m.consecutive_failures} consecutive failures (incident at ${m.failure_threshold})` : `${m.consecutive_successes} consecutive passes`} />

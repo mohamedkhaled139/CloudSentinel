@@ -1,0 +1,31 @@
+name: Bug report
+description: Something does not work as documented
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for reporting! Please do not include credentials, internal hostnames or customer data.
+  - type: input
+    id: version
+    attributes: { label: CloudSentinel version, placeholder: "0.1.0 (Settings → System)" }
+    validations: { required: true }
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Deployment
+      options: [Docker Compose, Kubernetes, Source install, Demo stack, Other]
+    validations: { required: true }
+  - type: dropdown
+    id: database
+    attributes: { label: Database, options: [PostgreSQL, SQLite] }
+  - type: textarea
+    id: what
+    attributes: { label: What happened?, description: Include the expected behaviour. }
+    validations: { required: true }
+  - type: textarea
+    id: steps
+    attributes: { label: Steps to reproduce, placeholder: "1. ...\n2. ..." }
+    validations: { required: true }
+  - type: textarea
+    id: logs
+    attributes: { label: Relevant logs, render: shell, description: Redact secrets and hostnames. }

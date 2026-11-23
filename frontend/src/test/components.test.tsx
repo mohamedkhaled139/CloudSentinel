@@ -88,3 +88,20 @@ describe("status presentation", () => {
     expect(screen.getByText("Synthetic")).toBeInTheDocument();
   });
 });
+
+describe("StatusStrip", () => {
+  it("renders empty buckets without empty-state styling", async () => {
+    const { StatusStrip } = await import("../components/charts");
+    const { container } = render(
+      <StatusStrip series={[
+        { t: "2026-01-01T00:00:00Z", availability: null, status: null, checks: 0 },
+        { t: "2026-01-01T01:00:00Z", availability: 50, status: "down", checks: 2 },
+      ]} />,
+    );
+    const bars = container.querySelectorAll(".strip span");
+    expect(bars).toHaveLength(2);
+    expect(bars[0].className).toBe("nodata");
+    expect(container.querySelector(".strip .empty")).toBeNull();
+    expect(bars[1].getAttribute("title")).toMatch(/down/);
+  });
+});

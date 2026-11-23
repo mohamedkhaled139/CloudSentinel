@@ -1,0 +1,40 @@
+# Read-only access for CloudSentinel's Kubernetes integration.
+# For an external CloudSentinel: create a token with
+#   kubectl -n cloudsentinel create token cloudsentinel-reader --duration=8760h
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cloudsentinel
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cloudsentinel-reader
+  namespace: cloudsentinel
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cloudsentinel-reader
+rules:
+  - apiGroups: [""]
+    resources: ["nodes", "pods"]
+    verbs: ["get", "list"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets", "daemonsets"]
+    verbs: ["get", "list"]
+  - nonResourceURLs: ["/readyz", "/version"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cloudsentinel-reader
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cloudsentinel-reader
+subjects:
+  - kind: ServiceAccount
+    name: cloudsentinel-reader
+    namespace: cloudsentinel

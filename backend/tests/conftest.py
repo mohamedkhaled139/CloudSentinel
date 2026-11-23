@@ -15,22 +15,37 @@ os.environ.update(
     CS_DEMO_MODE="false",
 )
 
-from fastapi.testclient import TestClient  # noqa: E402
-from sqlalchemy.orm import Session  # noqa: E402
+from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
 
-from cloudsentinel.api.auth import limiter  # noqa: E402
-from cloudsentinel.config import get_settings  # noqa: E402
-from cloudsentinel.db import init_engine, session_factory  # noqa: E402
-from cloudsentinel.main import create_app  # noqa: E402
-from cloudsentinel.migrate import upgrade_database  # noqa: E402
-from cloudsentinel.models import Role, User  # noqa: E402
-from cloudsentinel.security import hash_password  # noqa: E402
+from cloudsentinel.api.auth import limiter
+from cloudsentinel.config import get_settings
+from cloudsentinel.db import init_engine, session_factory
+from cloudsentinel.main import create_app
+from cloudsentinel.migrate import upgrade_database
+from cloudsentinel.models import Role, User
+from cloudsentinel.security import hash_password
 
 PASSWORD = "correct-horse-battery"
 
 
+TEST_PG_URL = os.environ.get("CS_TEST_DATABASE_URL")
+
+
 @pytest.fixture
 def db_url(tmp_path: Path) -> str:
+    """SQLite by default; set CS_TEST_DATABASE_URL to run the suite against PostgreSQL."""
+    if TEST_PG_URL:
+        from sqlalchemy import create_engine, text
+
+        from cloudsentinel.config import Settings
+
+        url = Settings(database_url=TEST_PG_URL).database_url
+        engine = create_engine(url)
+        with engine.begin() as conn:
+            conn.execute(text("DROP SCHEMA public CASCADE; CREATE SCHEMA public"))
+        engine.dispose()
+        return url
     return f"sqlite:///{tmp_path / 'test.db'}"
 
 

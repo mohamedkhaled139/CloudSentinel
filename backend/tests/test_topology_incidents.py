@@ -134,3 +134,14 @@ def test_manual_lifecycle(db):
         svc.acknowledge(db, inc, "x")
     svc.reopen(db, inc, "ops@example.com")
     assert inc.status == IncidentStatus.investigating and inc.resolved_at is None
+
+
+def test_same_component_monitors_are_grouped(db):
+    c = component(db, "web")
+    m_http, m_tcp = monitor(db, "http", c), monitor(db, "tcp", c)
+    feed(db, m_http, "dd", T0)
+    feed(db, m_tcp, "dd", T0)
+    first = svc.open_incident_for_monitor(db, m_http.id)
+    second = svc.open_incident_for_monitor(db, m_tcp.id)
+    assert second.parent_id == first.id
+    assert any(e.data.get("relation") == "same_component" for e in first.events)

@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     secret_key: str = Field(default="", repr=False)
     # Alternatively read the key from a file (e.g. a Docker/Kubernetes secret mount).
     secret_key_file: str | None = None
+    # Session cookie "Secure" flag: auto = set when the request arrived over HTTPS (directly or via proxy).
+    cookie_secure: Literal["auto", "true", "false"] = "auto"
     access_token_ttl_minutes: int = Field(default=720, ge=5, le=60 * 24 * 30)
 
     # Optional bootstrap administrator, created on startup if no users exist.

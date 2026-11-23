@@ -1,0 +1,26 @@
+name: Integration proposal
+description: Propose a new check provider or integration
+labels: ["integration", "triage"]
+body:
+  - type: input
+    id: system
+    attributes: { label: System or protocol, placeholder: "e.g. SNMP, OpenStack, DNS" }
+    validations: { required: true }
+  - type: textarea
+    id: checks
+    attributes:
+      label: What should be checked?
+      description: How should results map to up / degraded / down / unknown?
+    validations: { required: true }
+  - type: textarea
+    id: api
+    attributes:
+      label: Public API or protocol documentation
+      description: Integrations must use public, redistributable APIs. No confidential vendor documentation.
+    validations: { required: true }
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Contribution
+      options:
+        - label: I would like to implement this (see docs/integrations.md)

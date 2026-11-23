@@ -70,3 +70,11 @@ def test_demo_seed_is_flagged_synthetic_and_clearable(db):
     assert db.scalars(select(Component)).all() == [real]
     assert db.scalar(select(func.count(Incident.id))) == 0
     assert db.scalar(select(func.count(RiskFinding.id)).where(RiskFinding.is_synthetic.is_(True))) == 0
+
+
+def test_csv_export_neutralises_formulas(db):
+    m = monitor(db, '=HYPERLINK("http://evil")', component(db, "@cmd"))
+    feed(db, m, "u", T0)
+    r = build_report(db, T0, T0 + timedelta(hours=1), T0 + timedelta(hours=1))
+    rows = list(csv.reader(io.StringIO(report_csv(r, "monitors"))))
+    assert rows[1][1].startswith("'=") and rows[1][3] == "'@cmd"

@@ -201,6 +201,7 @@ def correlate(db: Session, incident: Incident, at: datetime | None = None) -> No
       probable consequence of it.
     * Open incidents on dependents that are not yet linked are re-linked under this one, which is a
       probable upstream cause.
+    * A second failing monitor on the same component is grouped under the component's open incident.
     """
     assert incident.component_id is not None
     graph = load_graph(db)
@@ -211,6 +212,32 @@ def correlate(db: Session, incident: Incident, at: datetime | None = None) -> No
             Incident.status.in_(OPEN_STATUSES), Incident.id != incident.id, Incident.component_id.is_not(None)
         )
     ).all()
+
+    same = sorted(
+        (i for i in others if i.component_id == incident.component_id and i.parent_id is None),
+        key=lambda i: i.started_at,
+    )
+    if same:
+        group = same[0]
+        incident.parent_id = group.id
+        add_event(
+            db,
+            incident,
+            "correlated",
+            f"Grouped with incident #{group.id} ({group.title}): another monitor on the same component is failing.",
+            data={"related_incident_id": group.id, "relation": "same_component"},
+            at=at,
+        )
+        add_event(
+            db,
+            group,
+            "correlated",
+            f"Incident #{incident.id} from monitor '{incident.monitor.name if incident.monitor else '?'}' "
+            "reports the same component failing.",
+            data={"related_incident_id": incident.id, "relation": "same_component"},
+            at=at,
+        )
+        return
 
     upstream_open = sorted((i for i in others if i.component_id in upstream), key=lambda i: i.started_at)
     if upstream_open:

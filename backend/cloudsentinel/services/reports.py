@@ -242,9 +242,25 @@ def _fmt(v: float | None, suffix: str = "") -> str:
     return "n/a" if v is None else f"{v:g}{suffix}"
 
 
+class _SafeWriter:
+    """CSV writer that neutralises spreadsheet formula injection (cells starting with = + - @)."""
+
+    def __init__(self, buf: io.StringIO) -> None:
+        self._w = csv.writer(buf)
+
+    def writerow(self, row: list[Any]) -> None:
+        self._w.writerow([_safe_cell(v) for v in row])
+
+
+def _safe_cell(v: Any) -> Any:
+    if isinstance(v, str) and v[:1] in ("=", "+", "-", "@", "\t", "\r"):
+        return "'" + v
+    return v
+
+
 def report_csv(report: Report, section: str = "monitors") -> str:
     buf = io.StringIO()
-    w = csv.writer(buf)
+    w = _SafeWriter(buf)
     if section == "incidents":
         w.writerow(
             [

@@ -12,8 +12,9 @@ from cloudsentinel.providers.kubernetes import (
     KubernetesProvider,
 )
 
-INTEG = IntegrationContext(1, "k8s", "kubernetes", {"api_server_url": "https://k8s.test:6443"},
-                           {"bearer_token": "sa-token"})
+INTEG = IntegrationContext(
+    1, "k8s", "kubernetes", {"api_server_url": "https://k8s.test:6443"}, {"bearer_token": "sa-token"}
+)
 
 
 def node(name, ready=True, pressure=None):
@@ -24,10 +25,19 @@ def node(name, ready=True, pressure=None):
 
 
 def pod(name, restarts=0, ready=True, waiting=None, phase="Running"):
-    cs = {"name": "app", "restartCount": restarts, "state": {"waiting": {"reason": waiting}} if waiting else {}}
-    return {"metadata": {"name": name}, "status": {
-        "phase": phase, "containerStatuses": [cs],
-        "conditions": [{"type": "Ready", "status": "True" if ready else "False"}]}}
+    cs = {
+        "name": "app",
+        "restartCount": restarts,
+        "state": {"waiting": {"reason": waiting}} if waiting else {},
+    }
+    return {
+        "metadata": {"name": name},
+        "status": {
+            "phase": phase,
+            "containerStatuses": [cs],
+            "conditions": [{"type": "Ready", "status": "True" if ready else "False"}],
+        },
+    }
 
 
 def run(routes, **cfg):
@@ -58,16 +68,27 @@ def test_nodes():
 
 
 def test_deployment_replicas_and_restarts():
-    dep = {"spec": {"replicas": 3, "selector": {"matchLabels": {"app": "api"}}}, "status": {"readyReplicas": 2}}
+    dep = {
+        "spec": {"replicas": 3, "selector": {"matchLabels": {"app": "api"}}},
+        "status": {"readyReplicas": 2},
+    }
     pods = {"items": [pod("api-1", restarts=4), pod("api-2"), pod("api-3", ready=False)]}
-    out, seen = run({"/apis/apps/v1/namespaces/prod/deployments/api": dep, "/api/v1/namespaces/prod/pods": pods},
-                    target="deployment", namespace="prod", name="api")
+    out, seen = run(
+        {"/apis/apps/v1/namespaces/prod/deployments/api": dep, "/api/v1/namespaces/prod/pods": pods},
+        target="deployment",
+        namespace="prod",
+        name="api",
+    )
     assert out.status == CheckStatus.degraded
     assert out.details["restarts"]["api-1"] == 4
     assert seen[1].url.params["labelSelector"] == "app=api"
     dep["status"]["readyReplicas"] = 0
-    out, _ = run({"/apis/apps/v1/namespaces/prod/deployments/api": dep, "/api/v1/namespaces/prod/pods": pods},
-                 target="deployment", namespace="prod", name="api")
+    out, _ = run(
+        {"/apis/apps/v1/namespaces/prod/deployments/api": dep, "/api/v1/namespaces/prod/pods": pods},
+        target="deployment",
+        namespace="prod",
+        name="api",
+    )
     assert out.status == CheckStatus.down
 
 

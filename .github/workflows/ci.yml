@@ -1,0 +1,108 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (Python ${{ matrix.python }}, ${{ matrix.db }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12", "3.13"]
+        db: [sqlite]
+        include:
+          - python: "3.12"
+            db: postgres
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: cs_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 3s --health-retries 20
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: backend/pyproject.toml
+      - run: pip install -e ".[dev,postgres]"
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: mypy cloudsentinel
+      - name: Tests
+        run: pytest
+        env:
+          CS_TEST_DATABASE_URL: ${{ matrix.db == 'postgres' && 'postgresql://postgres:test@localhost:5432/cs_test' || '' }}
+      - name: Migrations apply cleanly
+        run: CS_DATABASE_URL=sqlite:////tmp/ci.db cloudsentinel migrate
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  agent:
+    name: Agent (Python 3.8 compatibility)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.8"
+      - run: python -m py_compile agent/cloudsentinel_agent.py
+      - run: python agent/cloudsentinel_agent.py --print
+
+  docker:
+    name: Docker image
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          tags: cloudsentinel:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Smoke test
+        run: |
+          docker run -d --name cs -p 8000:8000 -e CS_SECRET_KEY=ci-only-secret cloudsentinel:ci
+          for i in $(seq 1 30); do curl -sf localhost:8000/readyz && break; sleep 2; done
+          curl -sf localhost:8000/readyz
+          curl -sf localhost:8000/ | grep -q "<div id=\"root\">"
+          docker logs cs

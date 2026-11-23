@@ -1,0 +1,33 @@
+# Demo environment: CloudSentinel with SYNTHETIC demo data plus a few REAL monitoring targets
+# (an nginx web server, Prometheus scraping itself) so both kinds of data can be compared.
+#
+#   docker compose -f deploy/demo/docker-compose.yml up --build
+#   open http://localhost:8000   (login: demo@example.com / demo-password-123)
+#
+# Never use these credentials outside a local demo.
+services:
+  cloudsentinel:
+    build: ../..
+    image: cloudsentinel:${CS_VERSION:-latest}
+    environment:
+      CS_DEMO_MODE: "true"
+      CS_SECRET_KEY: demo-only-secret-key-do-not-use-in-production
+      CS_DATABASE_URL: sqlite:////data/cloudsentinel.db
+      CS_BOOTSTRAP_ADMIN_EMAIL: demo@example.com
+      CS_BOOTSTRAP_ADMIN_PASSWORD: demo-password-123
+      CS_LOG_FORMAT: text
+    command: ["sh", "-c", "cloudsentinel seed-demo && (python /app/demo/setup_real_targets.py &) && exec cloudsentinel serve --host 0.0.0.0 --port 8000"]
+    volumes:
+      - ./setup_real_targets.py:/app/demo/setup_real_targets.py:ro
+    ports:
+      - "8000:8000"
+    depends_on: [web, prometheus]
+
+  web:
+    image: nginx:1.27-alpine
+
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    command: ["--config.file=/etc/prometheus/prometheus.yml"]
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro

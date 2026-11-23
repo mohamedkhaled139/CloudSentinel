@@ -128,7 +128,7 @@ export function IncidentsPage() {
                       <td>
                         <Link to={`/incidents/${i.id}`}><strong>#{i.id} {i.title}</strong></Link> <SyntheticBadge show={i.is_synthetic} />
                         <div className="muted small">
-                          {i.parent_id ? <>↳ probably caused by <Link to={`/incidents/${i.parent_id}`}>#{i.parent_id}</Link></> : null}
+                          {i.parent_id ? <>↳ linked to <Link to={`/incidents/${i.parent_id}`}>#{i.parent_id}</Link></> : null}
                           {i.child_count ? <>{i.child_count} correlated incident(s)</> : null}
                         </div>
                       </td>
@@ -284,11 +284,14 @@ export function IncidentDetailPage() {
             <Card title="Correlation">
               <p className="muted small" style={{ marginTop: 0 }}>Derived from declared dependencies. Correlation suggests a probable cause; it is not a confirmed root cause.</p>
               {inc.parent ? (
-                <div className="alert warn small">Probably caused by <Link to={`/incidents/${inc.parent.id}`}>#{inc.parent.id} {inc.parent.title}</Link> ({inc.parent.status})</div>
+                <div className="alert warn small">
+                  {inc.parent.component_id === inc.component_id ? "Grouped with" : "Probably caused by"}{" "}
+                  <Link to={`/incidents/${inc.parent.id}`}>#{inc.parent.id} {inc.parent.title}</Link> ({inc.parent.status})
+                </div>
               ) : null}
               {inc.children.length > 0 && (
                 <>
-                  <h3>Probable effects ({inc.children.length})</h3>
+                  <h3>Linked incidents ({inc.children.length})</h3>
                   <ul style={{ paddingLeft: 18, margin: "6px 0" }}>
                     {inc.children.map((c) => <li key={c.id}><Link to={`/incidents/${c.id}`}>#{c.id} {c.title}</Link> <IncidentStatusBadge status={c.status} /></li>)}
                   </ul>

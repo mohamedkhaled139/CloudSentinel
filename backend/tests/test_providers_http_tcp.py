@@ -12,8 +12,13 @@ from cloudsentinel.providers.tcp import TcpConfig, TcpProvider
 
 
 def ctx(cfg, timeout=2.0, degraded=None, allow_private=True):
-    return CheckContext(monitor_id=1, config=cfg, timeout_seconds=timeout, degraded_latency_ms=degraded,
-                        allow_private_targets=allow_private)
+    return CheckContext(
+        monitor_id=1,
+        config=cfg,
+        timeout_seconds=timeout,
+        degraded_latency_ms=degraded,
+        allow_private_targets=allow_private,
+    )
 
 
 def run(coro):
@@ -82,7 +87,7 @@ def test_http_blocks_private_targets_when_disabled():
 
 def test_http_against_real_server():
     class Handler(BaseHTTPRequestHandler):
-        def do_GET(self):  # noqa: N802
+        def do_GET(self):
             self.send_response(200)
             self.end_headers()
             self.wfile.write(b"healthy")
@@ -115,7 +120,9 @@ def test_tcp_up_and_banner():
         server = await _tcp_server(b"SSH-2.0-OpenSSH_9.6\r\n")
         port = server.sockets[0].getsockname()[1]
         async with server:
-            ok = await TcpProvider().check(ctx(TcpConfig(host="127.0.0.1", port=port, expect_banner="SSH-2.0")))
+            ok = await TcpProvider().check(
+                ctx(TcpConfig(host="127.0.0.1", port=port, expect_banner="SSH-2.0"))
+            )
             bad = await TcpProvider().check(ctx(TcpConfig(host="127.0.0.1", port=port, expect_banner="SMTP")))
         return ok, bad
 

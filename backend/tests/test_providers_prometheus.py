@@ -6,14 +6,22 @@ from cloudsentinel.models import CheckStatus
 from cloudsentinel.providers.base import CheckContext, IntegrationContext
 from cloudsentinel.providers.prometheus import PrometheusAdapter, PrometheusProvider, PrometheusQueryConfig
 
-INTEGRATION = IntegrationContext(1, "prom", "prometheus", {"base_url": "http://prom.test:9090"},
-                                 {"bearer_token": "tok"})
+INTEGRATION = IntegrationContext(
+    1, "prom", "prometheus", {"base_url": "http://prom.test:9090"}, {"bearer_token": "tok"}
+)
 
 
 def vector(*values, name="up"):
-    return {"status": "success", "data": {"resultType": "vector", "result": [
-        {"metric": {"__name__": name, "instance": f"node{i}"}, "value": [0, str(v)]} for i, v in enumerate(values)
-    ]}}
+    return {
+        "status": "success",
+        "data": {
+            "resultType": "vector",
+            "result": [
+                {"metric": {"__name__": name, "instance": f"node{i}"}, "value": [0, str(v)]}
+                for i, v in enumerate(values)
+            ],
+        },
+    }
 
 
 def provider(payload, seen=None, status=200):
@@ -40,7 +48,9 @@ def test_threshold_down_and_auth_header():
 
 
 def test_degraded_and_up():
-    out = check(provider(vector(0.85)), query="q", comparison=">", down_threshold=0.95, degraded_threshold=0.8)
+    out = check(
+        provider(vector(0.85)), query="q", comparison=">", down_threshold=0.95, degraded_threshold=0.8
+    )
     assert out.status == CheckStatus.degraded
     out = check(provider(vector(0.5)), query="q", comparison=">", down_threshold=0.95, degraded_threshold=0.8)
     assert out.status == CheckStatus.up
@@ -68,11 +78,14 @@ def test_adapter_connection_test():
     def handler(req):
         if req.url.path.endswith("buildinfo"):
             return httpx.Response(200, json={"status": "success", "data": {"version": "2.53.0"}})
-        return httpx.Response(200, json={"status": "success", "data": {"resultType": "scalar", "result": [0, "1"]}})
+        return httpx.Response(
+            200, json={"status": "success", "data": {"resultType": "scalar", "result": [0, "1"]}}
+        )
 
     res = asyncio.run(PrometheusAdapter(httpx.MockTransport(handler)).test_connection(INTEGRATION, 2))
     assert res.ok and "2.53.0" in res.message
 
-    res = asyncio.run(PrometheusAdapter(httpx.MockTransport(lambda r: httpx.Response(502))).test_connection(
-        INTEGRATION, 2))
+    res = asyncio.run(
+        PrometheusAdapter(httpx.MockTransport(lambda r: httpx.Response(502))).test_connection(INTEGRATION, 2)
+    )
     assert not res.ok

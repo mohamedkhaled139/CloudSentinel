@@ -1,0 +1,59 @@
+# Example in-cluster deployment (single replica: it also runs the scheduler).
+# Prerequisites: rbac.yaml applied, a PostgreSQL database, and a secret:
+#   kubectl -n cloudsentinel create secret generic cloudsentinel \
+#     --from-literal=secret-key="$(python3 -c 'import secrets;print(secrets.token_urlsafe(48))')" \
+#     --from-literal=database-url='postgresql://cloudsentinel:...@postgres:5432/cloudsentinel'
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudsentinel
+  namespace: cloudsentinel
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector:
+    matchLabels: { app: cloudsentinel }
+  template:
+    metadata:
+      labels: { app: cloudsentinel }
+    spec:
+      serviceAccountName: cloudsentinel-reader
+      securityContext: { runAsNonRoot: true, runAsUser: 10001 }
+      containers:
+        - name: cloudsentinel
+          image: cloudsentinel:0.1.0   # build with `docker build -t cloudsentinel:0.1.0 .` and push to your registry
+          ports: [{ containerPort: 8000 }]
+          env:
+            - { name: CS_ENVIRONMENT, value: production }
+            - name: CS_SECRET_KEY
+              valueFrom: { secretKeyRef: { name: cloudsentinel, key: secret-key } }
+            - name: CS_DATABASE_URL
+              valueFrom: { secretKeyRef: { name: cloudsentinel, key: database-url } }
+          readinessProbe:
+            httpGet: { path: /readyz, port: 8000 }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /healthz, port: 8000 }
+            periodSeconds: 20
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { memory: 768Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+            - { name: data, mountPath: /data }
+      volumes:
+        - { name: tmp, emptyDir: {} }
+        - { name: data, emptyDir: {} }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cloudsentinel
+  namespace: cloudsentinel
+spec:
+  selector: { app: cloudsentinel }
+  ports: [{ port: 80, targetPort: 8000 }]

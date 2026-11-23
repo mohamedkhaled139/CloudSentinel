@@ -76,8 +76,14 @@ def test_coverage_gap_for_critical_or_shared_components(db):
 def test_kubernetes_restart_increase(db):
     m = monitor(db, "deploy", component(db, "k8s"), kind="kubernetes")
     for i, restarts in enumerate([0, 1, 1, 4, 6]):
-        db.add(CheckResult(monitor_id=m.id, checked_at=NOW - timedelta(hours=5 - i), status="up",
-                           details={"restarts": {"api-1": restarts, "api-2": 2}}))
+        db.add(
+            CheckResult(
+                monitor_id=m.id,
+                checked_at=NOW - timedelta(hours=5 - i),
+                status="up",
+                details={"restarts": {"api-1": restarts, "api-2": 2}},
+            )
+        )
     m.last_checked_at = NOW
     db.flush()
     found = [f for f in analyze(db, NOW) if f.category == Category.restarts]
@@ -91,8 +97,13 @@ def test_agent_reboots(db):
     for day in range(4):
         boot = NOW - timedelta(days=3 - day, hours=1)
         db.add(AgentReport(agent_id=agent.id, received_at=boot + timedelta(minutes=5), boot_time=boot))
-        db.add(AgentReport(agent_id=agent.id, received_at=boot + timedelta(minutes=10),
-                           boot_time=boot + timedelta(seconds=1)))  # jitter
+        db.add(
+            AgentReport(
+                agent_id=agent.id,
+                received_at=boot + timedelta(minutes=10),
+                boot_time=boot + timedelta(seconds=1),
+            )
+        )  # jitter
     db.flush()
     found = [f for f in analyze(db, NOW) if f.category == Category.restarts]
     assert len(found) == 1 and "rebooted 3 times" in found[0].title
@@ -100,8 +111,15 @@ def test_agent_reboots(db):
 
 def test_tls_expiry(db):
     m = monitor(db, "web", component(db, "web"), kind="http")
-    db.add(CheckResult(monitor_id=m.id, checked_at=NOW, status="up", latency_ms=10,
-                       details={"tls_days_remaining": 5.0, "tls_not_after": "2026-03-15T00:00:00+00:00"}))
+    db.add(
+        CheckResult(
+            monitor_id=m.id,
+            checked_at=NOW,
+            status="up",
+            latency_ms=10,
+            details={"tls_days_remaining": 5.0, "tls_not_after": "2026-03-15T00:00:00+00:00"},
+        )
+    )
     m.last_checked_at = NOW
     db.flush()
     found = [f for f in analyze(db, NOW) if f.category == Category.tls_expiry]
@@ -109,7 +127,11 @@ def test_tls_expiry(db):
 
 
 def test_integration_error(db):
-    db.add(Integration(name="prom", kind="prometheus", config={}, status="error", last_error="connection refused"))
+    db.add(
+        Integration(
+            name="prom", kind="prometheus", config={}, status="error", last_error="connection refused"
+        )
+    )
     db.flush()
     assert Category.integration_error in categories(analyze(db, NOW))
 

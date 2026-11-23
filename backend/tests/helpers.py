@@ -37,14 +37,27 @@ def monitor(db: Session, name: str, comp: Component | None = None, **kw) -> Moni
     return m
 
 
-def feed(db: Session, m: Monitor, statuses: str, start: datetime, step: timedelta = timedelta(minutes=1),
-         latency: float | None = 50.0) -> datetime:
+def feed(
+    db: Session,
+    m: Monitor,
+    statuses: str,
+    start: datetime,
+    step: timedelta = timedelta(minutes=1),
+    latency: float | None = 50.0,
+) -> datetime:
     """Record a sequence of results: u=up, d=down, g=degraded, x=unknown."""
-    mapping = {"u": CheckStatus.up, "d": CheckStatus.down, "g": CheckStatus.degraded, "x": CheckStatus.unknown}
+    mapping = {
+        "u": CheckStatus.up,
+        "d": CheckStatus.down,
+        "g": CheckStatus.degraded,
+        "x": CheckStatus.unknown,
+    }
     t = start
     for ch in statuses:
         st = mapping[ch]
-        record_outcome(db, m, CheckOutcome(st, f"result {ch}", latency if st != CheckStatus.down else None), at=t)
+        record_outcome(
+            db, m, CheckOutcome(st, f"result {ch}", latency if st != CheckStatus.down else None), at=t
+        )
         t += step
     db.flush()
     return t

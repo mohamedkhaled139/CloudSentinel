@@ -41,6 +41,9 @@ function Tip({ active, payload, fmt, label }: TipProps) {
 }
 
 /** Availability over time (single series; the card title names it, so no legend). */
+const sparse = (data: SeriesPoint[], key: "availability" | "latency_ms") =>
+  data.filter((d) => d[key] !== null && d[key] !== undefined).length < 12;
+
 export function AvailabilityChart({ data, target }: { data: SeriesPoint[]; target?: number }) {
   const values = data.map((d) => d.availability).filter((v): v is number => v !== null);
   const min = values.length ? Math.min(...values) : 99;
@@ -66,6 +69,7 @@ export function AvailabilityChart({ data, target }: { data: SeriesPoint[]; targe
             fill="var(--series)"
             fillOpacity={0.12}
             connectNulls
+            dot={sparse(data, "availability") ? { r: 4, fill: "var(--series)", stroke: "var(--surface)", strokeWidth: 2 } : false}
             isAnimationActive={false}
             activeDot={{ r: 4, stroke: "var(--surface)", strokeWidth: 2 }}
           />
@@ -94,7 +98,7 @@ export function LatencyChart({ data, threshold }: { data: SeriesPoint[]; thresho
             dataKey="latency_ms"
             stroke="var(--series)"
             strokeWidth={2}
-            dot={false}
+            dot={sparse(data, "latency_ms") ? { r: 4, fill: "var(--series)", stroke: "var(--surface)", strokeWidth: 2 } : false}
             connectNulls
             isAnimationActive={false}
             activeDot={{ r: 4, stroke: "var(--surface)", strokeWidth: 2 }}
@@ -113,7 +117,7 @@ export function StatusStrip({ series, label }: { series: SeriesPoint[]; label?: 
         {series.map((p) => (
           <span
             key={p.t}
-            className={p.status ?? "empty"}
+            className={p.status ?? "nodata"}
             title={`${new Date(p.t).toLocaleString()} — ${p.status ?? "no data"}${
               p.availability !== null ? ` (${pct(p.availability)})` : ""
             }`}

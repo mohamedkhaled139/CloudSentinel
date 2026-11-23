@@ -138,7 +138,7 @@ export function OverviewPage() {
                       <td><SeverityBadge severity={i.severity} /></td>
                       <td>
                         <Link to={`/incidents/${i.id}`}>{i.title}</Link> <SyntheticBadge show={i.is_synthetic} />
-                        {i.parent_id && <div className="muted small">Probably caused by #{i.parent_id}</div>}
+                        {i.parent_id && <div className="muted small">Linked to #{i.parent_id}</div>}
                       </td>
                       <td><IncidentStatusBadge status={i.status} /></td>
                       <td className="right muted nowrap">{between(i.started_at, null)}</td>

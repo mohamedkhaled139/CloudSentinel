@@ -1,0 +1,38 @@
+# Production-style deployment: CloudSentinel + PostgreSQL.
+#   cp .env.example .env   # then set CS_SECRET_KEY and POSTGRES_PASSWORD
+#   docker compose up -d
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: cloudsentinel
+      POSTGRES_USER: cloudsentinel
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cloudsentinel -d cloudsentinel"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  cloudsentinel:
+    build: .
+    image: cloudsentinel:${CS_VERSION:-latest}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      CS_ENVIRONMENT: production
+      CS_DATABASE_URL: postgresql://cloudsentinel:${POSTGRES_PASSWORD}@db:5432/cloudsentinel
+      CS_SECRET_KEY: ${CS_SECRET_KEY:?set CS_SECRET_KEY in .env}
+      CS_BOOTSTRAP_ADMIN_EMAIL: ${CS_BOOTSTRAP_ADMIN_EMAIL:-}
+      CS_BOOTSTRAP_ADMIN_PASSWORD: ${CS_BOOTSTRAP_ADMIN_PASSWORD:-}
+      CS_LOG_FORMAT: json
+    ports:
+      - "${CS_PORT:-8000}:8000"
+
+volumes:
+  pgdata:

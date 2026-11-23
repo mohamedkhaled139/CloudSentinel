@@ -42,7 +42,8 @@ def test_scheduler_runs_due_monitors_and_periodic_jobs(db):
     finally:
         sock.close()
     with session_factory()() as check_db:
-        results = check_db.execute(select(Monitor.name, func.count(CheckResult.id))
-                                   .join(CheckResult).group_by(Monitor.name)).all()
+        results = check_db.execute(
+            select(Monitor.name, func.count(CheckResult.id)).join(CheckResult).group_by(Monitor.name)
+        ).all()
     assert dict(results) == {"tcp": 1}  # once per interval; disabled and synthetic (non-demo) skipped
     assert calls == [1]

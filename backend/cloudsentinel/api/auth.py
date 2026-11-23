@@ -60,8 +60,13 @@ limiter = LoginRateLimiter()
 _DUMMY_HASH: str | None = None
 
 
-def _issue(response: Response, user: User) -> TokenResponse:
+def _issue(request: Request, response: Response, user: User) -> TokenResponse:
     settings = get_settings()
+    secure = (
+        request.url.scheme == "https"
+        if settings.cookie_secure == "auto"
+        else settings.cookie_secure == "true"
+    )
     token = create_access_token(str(user.id), user.role)
     response.set_cookie(
         COOKIE_NAME,
@@ -69,7 +74,7 @@ def _issue(response: Response, user: User) -> TokenResponse:
         max_age=settings.access_token_ttl_minutes * 60,
         httponly=True,
         samesite="strict",
-        secure=settings.environment == "production",
+        secure=secure,
         path="/",
     )
     return TokenResponse(
@@ -85,7 +90,9 @@ def setup_status(db: Session = Depends(get_db)) -> dict[str, bool]:
 
 
 @router.post("/auth/setup", response_model=TokenResponse, status_code=201)
-def setup(body: SetupRequest, response: Response, db: Session = Depends(get_db)) -> TokenResponse:
+def setup(
+    body: SetupRequest, request: Request, response: Response, db: Session = Depends(get_db)
+) -> TokenResponse:
     """Create the first administrator. Only allowed while no users exist."""
     if (db.scalar(select(func.count(User.id))) or 0) > 0:
         raise HTTPException(status.HTTP_409_CONFLICT, "Setup has already been completed")
@@ -100,7 +107,7 @@ def setup(body: SetupRequest, response: Response, db: Session = Depends(get_db))
     db.flush()
     audit(db, user, "setup.admin_created", user.email)
     db.commit()
-    return _issue(response, user)
+    return _issue(request, response, user)
 
 
 @router.post("/auth/login", response_model=TokenResponse)
@@ -125,7 +132,7 @@ def login(
     user.last_login_at = utcnow()
     audit(db, user, "auth.login")
     db.commit()
-    return _issue(response, user)
+    return _issue(request, response, user)
 
 
 @router.post("/auth/logout", status_code=204)
