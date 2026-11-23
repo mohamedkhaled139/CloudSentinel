@@ -44,6 +44,7 @@ class Scheduler:
         allow_private_targets: bool = True,
         demo_mode: bool = False,
         periodic_jobs: list[tuple[str, float, Callable[[], Awaitable[None]]]] | None = None,
+        periodic_initial_delay: float = 0.0,
         reg: Registry = registry,
     ) -> None:
         self.session_factory = session_factory
@@ -58,12 +59,16 @@ class Scheduler:
         self._main: asyncio.Task[None] | None = None
         self._periodic = periodic_jobs or []
         self._last_run: dict[str, float] = {}
+        # Delay the first periodic run so analyses see fresh check results after a restart.
+        self._initial_delay = periodic_initial_delay
+        self._periodic_not_before = 0.0
         self.started_at: float | None = None
         self.last_tick_at: float | None = None
 
     def start(self) -> None:
         self._stop.clear()
         self.started_at = time.time()
+        self._periodic_not_before = time.monotonic() + self._initial_delay
         self._spread_initial_runs()
         self._main = asyncio.create_task(self._loop(), name="cloudsentinel-scheduler")
         log.info("scheduler started")
@@ -149,6 +154,8 @@ class Scheduler:
 
     def _run_periodic(self) -> None:
         now = time.monotonic()
+        if now < self._periodic_not_before:
+            return
         for name, interval, job in self._periodic:
             last = self._last_run.get(name)
             if last is not None and now - last < interval:

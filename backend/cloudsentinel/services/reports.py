@@ -144,7 +144,7 @@ def build_report(db: Session, start: datetime, end: datetime, now: datetime) -> 
     comp_incidents: Counter[int] = Counter(i.component_id for i in incidents if i.component_id)
     comp_downtime: dict[int, float] = defaultdict(float)
     for i in incidents:
-        if i.component_id and i.parent_id is None:
+        if i.component_id:
             comp_downtime[i.component_id] += duration_min(i)
 
     components = [

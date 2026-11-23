@@ -187,14 +187,14 @@ def _open_incident(db: Session, monitor: Monitor, result: CheckResult) -> Incide
         at=result.checked_at,
     )
     if monitor.component_id is not None:
-        correlate(db, incident)
+        correlate(db, incident, at=result.checked_at)
     log.info(
         "incident opened", extra={"incident_id": incident.id, "monitor_id": monitor.id, "severity": severity}
     )
     return incident
 
 
-def correlate(db: Session, incident: Incident) -> None:
+def correlate(db: Session, incident: Incident, at: datetime | None = None) -> None:
     """Link incidents along the dependency graph.
 
     * If a component this one depends on already has an open incident, this incident is linked as a
@@ -229,6 +229,7 @@ def correlate(db: Session, incident: Incident) -> None:
             "correlated",
             f"Probably caused by incident #{root.id} ({root.title}): this component depends on it.",
             data={"related_incident_id": root.id, "relation": "probable_cause"},
+            at=at,
         )
         add_event(
             db,
@@ -236,6 +237,7 @@ def correlate(db: Session, incident: Incident) -> None:
             "correlated",
             f"Related incident #{incident.id} ({incident.title}) on a dependent component.",
             data={"related_incident_id": incident.id, "relation": "probable_effect"},
+            at=at,
         )
         return
 
@@ -248,6 +250,7 @@ def correlate(db: Session, incident: Incident) -> None:
                 "correlated",
                 f"Probably caused by incident #{incident.id} ({incident.title}) on an upstream dependency.",
                 data={"related_incident_id": incident.id, "relation": "probable_cause"},
+                at=at,
             )
             add_event(
                 db,
@@ -255,6 +258,7 @@ def correlate(db: Session, incident: Incident) -> None:
                 "correlated",
                 f"Dependent incident #{other.id} ({other.title}) linked as a probable effect.",
                 data={"related_incident_id": other.id, "relation": "probable_effect"},
+                at=at,
             )
 
 

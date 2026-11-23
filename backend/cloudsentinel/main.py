@@ -85,6 +85,7 @@ def build_scheduler(settings: Settings) -> Scheduler:
         max_concurrency=settings.scheduler_max_concurrency,
         allow_private_targets=settings.allow_private_targets,
         demo_mode=settings.demo_mode,
+        periodic_initial_delay=90,
         periodic_jobs=[
             ("integrations", 300, integrations_job),
             ("risk_analysis", float(settings.risk_analysis_interval_seconds), risk_job),
