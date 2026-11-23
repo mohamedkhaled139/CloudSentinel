@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+
+# CloudSentinel local state
+*.db
+*.db-wal
+*.db-shm
+.cloudsentinel_secret
+.env
+
+# Node
+node_modules/
+frontend/dist/
+frontend/coverage/
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store
